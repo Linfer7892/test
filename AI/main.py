@@ -14,7 +14,7 @@ def main(args):
     dataset = datasets.load_dataset(args.dataset, train=True)
     
     # DataLoader 생성: (여기서는 PyTorch의 DataLoader를 사용)
-    dataloader = DataLoader(dataset, batch_size=args.batch, shuffle=True, num_workers=2)
+    dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=2)
     
     # 옵티마이저 정의 (예: SGD)
     optimizer = optim.SGD(model.parameters(), lr=1e-3)
@@ -24,7 +24,7 @@ def main(args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
     
-    for epoch in range(args.epoch):
+    for epoch in range(args.num_epochs):
         model.train()
         running_loss = 0.0
         for batch_idx, (inputs, labels) in enumerate(dataloader):
