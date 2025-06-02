@@ -1,70 +1,52 @@
+import argparse
+import os
+
+import models
+import datasets
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
-import argparse
-
-import models
-import datasets
-
-def train(model, dataloader, optimizer, criterion, device):
-    model.train()
-
-    for inputs, targets in dataloader:
-        inputs, targets = inputs.to(device), targets.to(device)
-        optimizer.zero_grad()
-        outputs = model(inputs)
-        loss = criterion(outputs, targets)
-        loss.backward()
-        optimizer.step()
-
-def test(model, dataloader, criterion, device):
-    model.eval()
-
-    total = 0
-    correct = 0
-    total_loss = 0.0
-
-    with torch.no_grad():
-        for inputs, targets in dataloader:
-            inputs, targets = inputs.to(device), targets.to(device)
-            outputs = model(inputs)
-            loss = criterion(outputs, targets)
-            total_loss += loss.item()
-
-            _, predicted = torch.max(outputs, 1)
-            correct += (predicted == targets).sum().item()
-            total += targets.size(0)
-
-    avg_loss = total_loss / len(dataloader)
-    accuracy = 100. * correct / total
-    print(f"Test Loss: {avg_loss:.4f}, Accuracy: {accuracy:.4f}%")
-
 
 def main(args):
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    # 선택한 모델과 dataset 로딩
+    model = models.load_model(args.model)
+    dataset = datasets.load_dataset(args.dataset, train=True)
     
-    model = models.load_model(args.model).to(device)
-
-    train_dataset = datasets.load_dataset(args.dataset, train=True)
-    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
-
-    test_dataset = datasets.load_dataset(args.dataset, train=False)
-    test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False)
-
-    criterion = nn.CrossEntropyLoss()
+    # DataLoader 생성: (여기서는 PyTorch의 DataLoader를 사용)
+    dataloader = DataLoader(dataset, batch_size=args.batch, shuffle=True, num_workers=2)
+    
+    # 옵티마이저 정의 (예: SGD)
     optimizer = optim.SGD(model.parameters(), lr=1e-3)
-
-    for epoch in range(args.num_epochs):
-        print(f"Epoch {epoch+1}/{args.num_epochs}")
-        train(model, train_loader, optimizer, criterion, device)
-        test(model, test_loader, criterion, device)
+    
+    # 간단한 training loop (에포크 수만큼 반복)
+    criterion = nn.CrossEntropyLoss()
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model.to(device)
+    
+    for epoch in range(args.epoch):
+        model.train()
+        running_loss = 0.0
+        for batch_idx, (inputs, labels) in enumerate(dataloader):
+            inputs, labels = inputs.to(device), labels.to(device)
+            
+            optimizer.zero_grad()
+            outputs = model(inputs)
+            loss = criterion(outputs, labels)
+            loss.backward()
+            optimizer.step()
+            
+            running_loss += loss.item()
+            if (batch_idx + 1) % 10 == 0:
+                print(f"Epoch [{epoch+1}/{args.epoch}], Step [{batch_idx+1}/{len(dataloader)}], Loss: {running_loss / 10:.4f}")
+                running_loss = 0.0
+    print("Training finished.")
 
 if __name__ == "__main__":
     argparser = argparse.ArgumentParser()
-    argparser.add_argument("--model", type=str, required=True)
-    argparser.add_argument("--dataset", type=str, default="cifar10")
-    argparser.add_argument("--num_epochs", type=int, default=100)
-    argparser.add_argument("--batch_size", type=int, default=64)
+    argparser.add_argument("--model", type=str, default="resnet34", help="Choose the model: resnet34, densenet, fractalnet")
+    argparser.add_argument("--dataset", type=str, default="cifar10", help="Dataset to use: cifar10 or cifar100")
+    argparser.add_argument("--num_epochs", type=int, default=100, help="Number of training epochs")
+    argparser.add_argument("--batch_size", type=int, default=64, help="Batch size")
     args = argparser.parse_args()
     main(args)
