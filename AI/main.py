@@ -38,7 +38,7 @@ def main(args):
             
             running_loss += loss.item()
             if (batch_idx + 1) % 10 == 0:
-                print(f"Epoch [{epoch+1}/{args.epoch}], Step [{batch_idx+1}/{len(dataloader)}], Loss: {running_loss / 10:.4f}")
+                print(f"Epoch [{epoch+1}/{args.num_epochs}], Step [{batch_idx+1}/{len(dataloader)}], Loss: {running_loss / 10:.4f}")
                 running_loss = 0.0
     print("Training finished.")
 
