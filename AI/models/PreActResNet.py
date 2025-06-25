@@ -40,11 +40,11 @@ class PreActResNet(nn.Module):
         self.conv5 = self._make_layer(block, 512, layers[3], stride=2)
         
         self.classifier = nn.Sequential(
-            nn.BatchNorm2d(512 * block.expansion),
+            nn.BatchNorm2d(512),
             nn.ReLU(),
             nn.AdaptiveAvgPool2d((1, 1)),
             nn.Flatten(),
-            nn.Linear(512 * block.expansion, num_classes)
+            nn.Linear(512, num_classes)
         )
 
     def _make_layer(self, block, out_channels, num_blocks, stride):
@@ -52,7 +52,7 @@ class PreActResNet(nn.Module):
         layers = []
         for s in strides:
             layers.append(block(self.in_channels, out_channels, s))
-            self.in_channels = out_channels * block.expansion
+            self.in_channels = out_channels
         return nn.Sequential(*layers)
 
     def forward(self, x):
