@@ -144,7 +144,7 @@ def plot_results(num_epochs, train_losses, train_accuracies, test_losses, test_a
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", type=str, default="resnet18", 
-                        help="Model: resnet34, densenet, fractalnet, preactresnet")
+                        help="Model: resnet18, densenet, fractalnet, preactresnet18")
     parser.add_argument("--dataset", type=str, default="cifar10", 
                         help="Dataset: cifar10 or cifar100")
     parser.add_argument("--num_epochs", type=int, default=100)
