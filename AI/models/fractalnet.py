@@ -22,8 +22,8 @@ class FractalBlock(nn.Module):
         
         # 깊이가 1보다 클 때만 재귀적으로 두 개의 브랜치 생성
         if depth > 1:
-            self.branch1 = FractalBlock(in_channels, out_channels, depth - 1, stride=stride)
-            self.branch2 = FractalBlock(in_channels, out_channels, depth - 1, stride=stride)
+            self.branch1 = FractalBlock(in_channels, out_channels, depth-1, stride=stride)
+            self.branch2 = FractalBlock(in_channels, out_channels, depth-1, stride=stride)
 
     def forward(self, x):
         if self.depth == 1:
