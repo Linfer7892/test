@@ -38,7 +38,7 @@ class FractalBlock(nn.Module):
                 return self.local_path(x)
             elif path_choice == 1:
                 return self.branch1(x)
-            else: # path_choice == 2
+            else:
                 return self.branch2(x)
 
         # 추론 시: 모든 경로의 출력을 평균
