@@ -1,14 +1,15 @@
 import argparse
 import os
-
-import models
-import datasets
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from torch.optim.lr_scheduler import StepLR
 import matplotlib.pyplot as plt
+
+# 사용자 정의 모듈 (실행 환경에 맞게 준비되어 있어야 함)
+import models
+import datasets
 
 def main(args):
     # 모델 로드
@@ -33,17 +34,25 @@ def main(args):
                           momentum=0.9, weight_decay=args.weight_decay)
     criterion = nn.CrossEntropyLoss()
     scheduler = StepLR(optimizer, step_size=args.lr_step, gamma=args.lr_gamma)
+
+    print("-----------------------------Hyper Parameter-----------------------------")
+    print(f"Model: {args.model}")
+    print(f"Dataset: {args.dataset}")
+    print(f"Num of Epochs: {args.num_epochs}")
+    print(f"Batch Size: {args.batch_size}")
+    print(f"Initial Learning Rate: {args.lr}")
+    print(f"Weight Decay: {args.weight_decay}")
+    print("-------------------------------------------------------------------------")
+    print("Training start.")
     
     # 결과를 저장할 리스트 초기화
-    train_losses = []
     train_accuracies = []
-    test_losses = []
     test_accuracies = []
 
     # training loop
     for epoch in range(args.num_epochs):
         model.train()
-        current_train_loss = 0.0
+        train_loss = 0.0
         correct_train = 0
         total_train = 0
         
@@ -56,7 +65,7 @@ def main(args):
             loss.backward()
             optimizer.step()
             
-            current_train_loss += loss.item()
+            train_loss += loss.item()
             _, predicted = outputs.max(1)
             total_train += labels.size(0)
             correct_train += predicted.eq(labels).sum().item()
@@ -65,17 +74,16 @@ def main(args):
             if (batch_idx + 1) % args.print_freq == 0:
                 print(f'Epoch: [{epoch+1}/{args.num_epochs}] '
                       f'Step: [{batch_idx+1}/{len(train_loader)}] '
-                      f'Loss: {current_train_loss/(batch_idx+1):.4f} '
+                      f'Loss: {train_loss/(batch_idx+1):.4f} '
                       f'Acc: {100.*correct_train/total_train:.2f}%')
         
-        # 에포크 종료 후 학습 결과 저장
-        train_losses.append(current_train_loss / len(train_loader))
+        # 에포크 종료 후 학습 정확도 저장
         train_accuracies.append(100. * correct_train / total_train)
 
         # eval_freq마다 평가
         if (epoch + 1) % args.eval_freq == 0:
             model.eval()
-            current_test_loss = 0.0
+            test_loss = 0.0
             correct_test = 0
             total_test = 0
             
@@ -85,70 +93,61 @@ def main(args):
                     outputs = model(inputs)
                     loss = criterion(outputs, labels)
                     
-                    current_test_loss += loss.item()
+                    test_loss += loss.item()
                     _, predicted = outputs.max(1)
                     total_test += labels.size(0)
                     correct_test += predicted.eq(labels).sum().item()
             
-            # 테스트 결과 저장
-            test_losses.append(current_test_loss / len(test_loader))
-            test_accuracies.append(100. * correct_test / total_test)
+            # 테스트 정확도 저장
+            current_test_acc = 100. * correct_test / total_test
+            test_accuracies.append(current_test_acc)
             
-            print(f'Epoch [{epoch+1}] Test Loss: {current_test_loss/len(test_loader):.4f} '
-                  f'Test Acc: {100.*correct_test/total_test:.2f}%')
-        else: # eval_freq가 1이 아닐 경우, 빈 값 추가하여 리스트 길이 맞추기
-            test_losses.append(test_losses[-1] if len(test_losses) > 0 else 0.0) # 이전 값으로 채우거나 0.0
-            test_accuracies.append(test_accuracies[-1] if len(test_accuracies) > 0 else 0.0) # 이전 값으로 채우거나 0.0
-                
+            print(f'Epoch [{epoch+1}] Test Loss: {test_loss/len(test_loader):.4f} '
+                  f'Test Acc: {current_test_acc:.2f}%')
+        
+        # 평가하지 않는 에포크의 경우, 이전 정확도 값으로 채워넣어 리스트 길이를 맞춤
+        elif len(test_accuracies) > 0:
+            test_accuracies.append(test_accuracies[-1])
+            
         scheduler.step()
     
     print("Training finished.")
 
     # 학습 결과 시각화
-    plot_results(args.num_epochs, train_losses, train_accuracies, test_losses, test_accuracies, args.model, args.dataset)
+    plot_accuracy(args.num_epochs, train_accuracies, test_accuracies, args.model, args.dataset)
 
 
-def plot_results(num_epochs, train_losses, train_accuracies, test_losses, test_accuracies, model_name, dataset_name):
+def plot_accuracy(num_epochs, train_accuracies, test_accuracies, model_name, dataset_name):
+    """학습 및 테스트 정확도를 시각화하고 파일로 저장하는 함수"""
     epochs_range = range(1, num_epochs + 1)
     
-    # Loss 그래프
-    plt.figure(figsize=(12, 5))
-    plt.subplot(1, 2, 1)
-    plt.plot(epochs_range, train_losses, label='Training Loss')
-    # eval_freq에 따라 test_losses의 길이를 맞추기 위해 조정
-    test_epochs_range = [i * args.eval_freq for i in range(len(test_losses))]
-    plt.plot(test_epochs_range, test_losses, label='Validation Loss')
-    plt.title(f'{model_name} on {dataset_name} - Loss over Epochs')
-    plt.xlabel('Epoch')
-    plt.ylabel('Loss')
+    plt.figure(figsize=(8, 6))
+    plt.plot(epochs_range, train_accuracies, 'o-', label='Training Accuracy')
+    plt.plot(epochs_range, test_accuracies, 'o-', label='Validation Accuracy')
+    plt.title(f'{model_name} on {dataset_name} - Accuracy over Epochs', fontsize=16)
+    plt.xlabel('Epoch', fontsize=12)
+    plt.ylabel('Accuracy (%)', fontsize=12)
     plt.legend()
     plt.grid(True)
-
-    # Accuracy 그래프
-    plt.subplot(1, 2, 2)
-    plt.plot(epochs_range, train_accuracies, label='Training Accuracy')
-    plt.plot(test_epochs_range, test_accuracies, label='Validation Accuracy')
-    plt.title(f'{model_name} on {dataset_name} - Accuracy over Epochs')
-    plt.xlabel('Epoch')
-    plt.ylabel('Accuracy (%)')
-    plt.legend()
-    plt.grid(True)
+    plt.ylim(0, 100) # Y축 범위를 0-100%로 고정
     
     # 그래프 저장
     plot_dir = 'plots'
     os.makedirs(plot_dir, exist_ok=True)
-    plt.tight_layout()
-    plt.savefig(os.path.join(plot_dir, f'{model_name}_{dataset_name}_results.png'))
+    save_path = os.path.join(plot_dir, f'{model_name}_{dataset_name}_accuracy.png')
+    plt.savefig(save_path)
+    print(f"Accuracy plot saved to {save_path}")
+    
     plt.show() # 그래프를 화면에 표시
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description="PyTorch CIFAR-10/100 Training")
     parser.add_argument("--model", type=str, default="resnet18", 
                         help="Model: resnet18, densenet, fractalnet, preactresnet18")
     parser.add_argument("--dataset", type=str, default="cifar10", 
                         help="Dataset: cifar10 or cifar100")
     parser.add_argument("--num_epochs", type=int, default=100)
-    parser.add_argument("--batch_size", type=int, default=64)
+    parser.add_argument("--batch_size", type=int, default=128)
     parser.add_argument("--lr", type=float, default=0.1, help="learning rate")
     parser.add_argument("--weight_decay", type=float, default=5e-4)
     parser.add_argument("--lr_step", type=int, default=30, help="LR scheduler step")
