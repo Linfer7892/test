@@ -30,9 +30,9 @@ def get_training_config(model_name):
         },
         "default": {
             "lr": 0.1,
-            "batch_size": 64,
-            "num_epochs": 200,
-            "lr_step": 100,
+            "batch_size": 128,
+            "num_epochs": 100,
+            "lr_step": 30,
             "lr_gamma": 0.1
         }
     }
@@ -73,9 +73,9 @@ def main(args):
     # 논문 기반 설정 + 사용자 입력 오버라이드
     config = get_training_config(args.model)
     final_lr = args.lr if args.lr != 0.1 else config["lr"]
-    final_batch_size = args.batch_size if args.batch_size != 64 else config["batch_size"]
-    final_epochs = args.num_epochs if args.num_epochs != 200 else config["num_epochs"]
-    final_lr_step = args.lr_step if args.lr_step != 100 else config["lr_step"]
+    final_batch_size = args.batch_size if args.batch_size != 128 else config["batch_size"]
+    final_epochs = args.num_epochs if args.num_epochs != 100 else config["num_epochs"]
+    final_lr_step = args.lr_step if args.lr_step != 30 else config["lr_step"]
     
     # 데이터로더
     train_loader = DataLoader(train_dataset, batch_size=final_batch_size, shuffle=True, num_workers=4, pin_memory=True)
@@ -177,11 +177,11 @@ if __name__ == "__main__":
     parser.add_argument("--optimizer", type=str, default="sgd")
     
     # 학습 하이퍼파라미터
-    parser.add_argument("--num_epochs", type=int, default=200, help="Number of epochs")
-    parser.add_argument("--batch_size", type=int, default=64, help="Batch size")
+    parser.add_argument("--num_epochs", type=int, default=100, help="Number of epochs")
+    parser.add_argument("--batch_size", type=int, default=128, help="Batch size")
     parser.add_argument("--lr", type=float, default=0.1, help="Learning rate")
     parser.add_argument("--weight_decay", type=float, default=5e-4, help="Weight decay")
-    parser.add_argument("--lr_step", type=int, default=100, help="LR scheduler step size")
+    parser.add_argument("--lr_step", type=int, default=30, help="LR scheduler step size")
     parser.add_argument("--lr_gamma", type=float, default=0.1, help="LR scheduler gamma")
     
     # 로그 및 평가 주기
