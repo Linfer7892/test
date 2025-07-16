@@ -29,14 +29,22 @@ def main(args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
     
-    # optimizer, criterion, scheduler
-    optimizer = optim.SGD(model.parameters(), lr=args.lr, 
-                          momentum=0.9, weight_decay=args.weight_decay)
+    if args.optimizer.lower() == 'sgd':
+        optimizer = optim.SGD(model.parameters(), lr=args.lr, 
+                              momentum=0.9, weight_decay=args.weight_decay)
+    elif args.optimizer.lower() == 'adam':
+        optimizer = optim.Adam(model.parameters(), lr=args.lr, 
+                               weight_decay=args.weight_decay)
+    else:
+        raise ValueError(f"Unsupported optimizer: {args.optimizer}")
+        
     criterion = nn.CrossEntropyLoss()
     scheduler = StepLR(optimizer, step_size=args.lr_step, gamma=args.lr_gamma)
+    
     print("-----------------------------Hyper Parameter-----------------------------")
     print("Model:", args.model)
     print("Dataset:", args.dataset)
+    print("Optimizer:", args.optimizer)
     print("Num of Epochs:", args.num_epochs)
     print("Batch Size:", args.batch_size)
     print("Initial Learning Rate:", args.lr)
@@ -111,6 +119,8 @@ def main(args):
         # 평가하지 않는 에포크의 경우, 이전 정확도 값으로 채워넣어 리스트 길이를 맞춤
         elif len(test_accuracies) > 0:
             test_accuracies.append(test_accuracies[-1])
+        else: # 첫 에포크부터 평가하지 않을 경우
+            test_accuracies.append(0)
             
         scheduler.step()
     
@@ -121,7 +131,6 @@ def main(args):
 
 
 def plot_accuracy(num_epochs, train_accuracies, test_accuracies, model_name, dataset_name):
-    """학습 및 테스트 정확도를 시각화하고 파일로 저장하는 함수"""
     epochs_range = range(1, num_epochs + 1)
     
     plt.figure(figsize=(8, 6))
@@ -132,7 +141,7 @@ def plot_accuracy(num_epochs, train_accuracies, test_accuracies, model_name, dat
     plt.ylabel('Accuracy (%)', fontsize=12)
     plt.legend()
     plt.grid(True)
-    plt.ylim(0, 100) # Y축 범위를 0-100%로 고정
+    plt.ylim(0, 100)
     
     # 그래프 저장
     plot_dir = 'plots'
@@ -141,16 +150,18 @@ def plot_accuracy(num_epochs, train_accuracies, test_accuracies, model_name, dat
     plt.savefig(save_path)
     print(f"Accuracy plot saved to {save_path}")
     
-    plt.show() # 그래프를 화면에 표시
+    plt.show()
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="PyTorch CIFAR-10/100 Training")
+    parser = argparse.ArgumentParser()
     parser.add_argument("--model", type=str, default="resnet18", 
-                        help="Model: resnet18, densenet, fractalnet, preactresnet18")
+                        help="Model: resnet18, densenet, fractalnet, preactresnet18, vit")
     parser.add_argument("--dataset", type=str, default="cifar10", 
                         help="Dataset: cifar10 or cifar100")
+    parser.add_argument("--optimizer", type=str, default="sgd",
+                        help="Optimizer: sgd or adam")
     parser.add_argument("--num_epochs", type=int, default=100)
-    parser.add_argument("--batch_size", type=int, default=128)
+    parser.add_argument("--batch_size", type=int, default=64)
     parser.add_argument("--lr", type=float, default=0.1, help="learning rate")
     parser.add_argument("--weight_decay", type=float, default=5e-4)
     parser.add_argument("--lr_step", type=int, default=30, help="LR scheduler step")
